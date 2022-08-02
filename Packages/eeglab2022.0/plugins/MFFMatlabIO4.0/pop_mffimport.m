@@ -154,7 +154,7 @@ for iFile = 1:length(fileName)
             strField(:) = {'_'}; % add space between events
             for iEvent = 1:length(EEGTMP.event)
                 if ~isequal(lower(EEGTMP.event(iEvent).type), 'boundary') % not a boundary
-                    if ~all(cellfun(@isempty, dataField(iEvent,:))) % not a trial type
+                    if ~all(cellfun(@isempty, dataField(iEvent,:))) % not a toperial type
                         tmpType = [ dataField(iEvent,:); strField ];
                         tmpType = [ tmpType{:} ];
                         tmpType(end) = [];

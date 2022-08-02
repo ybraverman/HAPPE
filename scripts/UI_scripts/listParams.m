@@ -104,8 +104,8 @@ elseif params.loadInfo.inputFormat == 4; fprintf('.cdt (Neuroscan)\n') ;
 elseif params.loadInfo.inputFormat == 5
     fprintf('.mff (EGI)\n') ;
     fprintf(' - Type Fields: ') ;
-    fprintf([sprintf('%s, ', params.loadInfo.typeFields{1:end-1}), ...
-        params.loadInfo.typeFields{end} '\n']) ;
+    %fprintf([sprintf('%s, ', params.loadInfo.typeFields{1:end-1}), ...
+     %   params.loadInfo.typeFields{end} '\n']) ;
 end
 
 %% Aquisition Layout

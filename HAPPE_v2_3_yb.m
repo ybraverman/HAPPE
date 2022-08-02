@@ -73,9 +73,9 @@
 % contributors are under no obligation to provide maintenance, support, 
 % updates, enhancements, or modifications.
 %~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+function [eegByTags,params, dataQC, dataQCTab,lnMeans,wavMeans] = HAPPE_v2_3_yb(EEGraw, grp_proc_info_in,FileNames,curr_file)
 %% CLEAR THE WORKSPACE
-clear ;
+%clear ;
 
 %% SET FOLDERS FOR HAPPE AND EEGLAB PATHS
 fprintf('Preparing HAPPE...\n') ;
@@ -106,25 +106,41 @@ end
 
 %% DETERMINE AND SET PATH TO DATA
 % Use input from the command line to set the path to the data. If an 
-% invalid path is entered, repeat until a valid path is entered.
-while true
-    srcDir = input('Enter the path to the folder containing the dataset(s):\n> ','s') ;
-    if exist(srcDir, 'dir') == 7; break ;
-    else; fprintf(['Invalid input: please enter the complete path to the ' ...
-            'folder containing the dataset(s).\n']) ;
-    end
-end
+% % invalid path is entered, repeat until a valid path is entered.YB
+% COMMENTED
+% while true
+%     srcDir = input('Enter the path to the folder containing the dataset(s):\n> ','s') ;
+%     if exist(srcDir, 'dir') == 7; break ;
+%     else; fprintf(['Invalid input: please enter the complete path to the ' ...
+%             'folder containing the dataset(s).\n']) ;
+%     end
+% end
+srcDir = fullfile(grp_proc_info_in.src_dir{1,1},strcat('HAPPE+ER_',grp_proc_info_in.beapp_curr_run_tag)); % YB ADDED enters path to folder containing datasets
+
 cd (srcDir) ;
 
 %% DETERMINE IF REPROCESSING DATA
-[reprocess, rerunExt] = isReprocessed() ;
-
+%[reprocess, rerunExt] = isReprocessed() ; YB commented
+% YB added - automatically creates new files and uses default naming, could
+% change later
+if grp_proc_info_in.HAPPE_ER_reprocessing
+    reprocess = 1;
+    rerunExt = ['_rerun_' datestr(now, 'dd-mm-yyyy')];
+else
+    reprocess = 0;
+    rerunExt = '';
+end
 %% DETERMINE IF USING PRESET PARAMETERS
-ver = '2_3_0' ;
-[preExist, params, changeParams] = isPreExist(reprocess, ver) ;
+version = '2_3_0' ; %yb changed ver to version b/c there was overlap w eeglb varaible and it threw error
+%[preExist, params, changeParams] = isPreExist(reprocess, ver) ; YB
+%COMMENTED and added line below, setting preExist to 1 bc dealt w earlier
+%and changer params to 0 and loading pre-existing param file from path
+preExist = 1;  load(grp_proc_info_in.HAPPE_ER_parameters_file_location{1,1}) ; changeParams = 0;
 
 %% SET PARAMETERS
-params = setParams(params, preExist, reprocess, changeParams, happeDir) ;
+%YB commented - these steps will be dealt with using
+%beapp_translate_to_happe_inputs.m
+%params = setParams(params, preExist, reprocess, changeParams, happeDir) ;
 
 %% SAVE INPUT PARAMETERS
 % If created new or changed parameter set, save as a new .mat file to a new
@@ -155,7 +171,7 @@ if ~preExist || changeParams
 
     % SAVE PARAMETERS: Save the params variable to a .mat file using the
     % name created above.
-    params.HAPPEver = ver ;
+    params.HAPPEver = version ;
     fprintf('Saving parameters...') ;
     save(paramFile, 'params') ;
     fprintf('Parameters saved.') ;
@@ -193,7 +209,8 @@ elseif params.loadInfo.inputFormat == 5; inputExt = '.mff' ;
 end
 % COLLECT FILE NAMES: gather the names of all the files with the relevant
 % file extension in the directory indicated by the user.
-FileNames = {dir(['*' inputExt]).name} ;
+%FileNames = {dir(['*' inputExt]).name} ; YB COMMENTED AND PASS IN FILENAME
+%THROUGH BEAPP
 % LOCATE STIM FILE AND NAMES
 if params.loadInfo.inputFormat == 1 && params.paradigm.task
     % ***
@@ -254,104 +271,108 @@ for currFile = 1:length(FileNames)
         if ~reprocess
             %% LOAD AND VALIDATE RAW FILE
             fprintf(['Loading ' FileNames{currFile} '...\n']) ;
+            
             try
-                % .MAT FILES
-                if params.loadInfo.inputFormat == 1
-                    % Net Station:
-                    if params.loadInfo.NSformat
-                        load(FileNames{currFile}) ;
-                        % Use known information about Net Station sampling 
-                        % rate variable names to determine the sampling 
-                        % rate of the file.
-                        srate = intersect(who, {'samplingRate', 'EEGSamplingRate'}) ;
-                        srate = double(eval(srate{1})) ;
-                        % Use the potential variable names given by the user to
-                        % determine the data variable.
-                        eegVName = intersect(who, params.loadInfo.NSvarNames) ;
-                        % Try to load the EEG using an EGI Net Station EEGLAB
-                        % plugin. If unable to load the file, throws an error.
-                        % Specifically looks for MATLAB:badsubscript.
-                        try EEGraw = pop_importegimat(FileNames{currFile}, ...
-                                srate, 0.00, eegVName{1}) ;
-                        catch ME
-                            if strcmp(ME.identifier, 'MATLAB:badsubscript')
-                                fprintf(['Sorry, could not read the variable' ...
-                                    ' name of the EEG data. Please check your' ...
-                                    ' file.\n']) ;
+                if isempty(EEGraw)
+                    % .MAT FILES
+                    if params.loadInfo.inputFormat == 1
+                        % Net Station:
+                        if params.loadInfo.NSformat
+                            load(FileNames{currFile}) ;
+                            % Use known information about Net Station sampling
+                            % rate variable names to determine the sampling
+                            % rate of the file.
+                            srate = intersect(who, {'samplingRate', 'EEGSamplingRate'}) ;
+                            srate = double(eval(srate{1})) ;
+                            % Use the potential variable names given by the user to
+                            % determine the data variable.
+                            eegVName = intersect(who, params.loadInfo.NSvarNames) ;
+                            % Try to load the EEG using an EGI Net Station EEGLAB
+                            % plugin. If unable to load the file, throws an error.
+                            % Specifically looks for MATLAB:badsubscript.
+                            try EEGraw = pop_importegimat(FileNames{currFile}, ...
+                                    srate, 0.00, eegVName{1}) ;
+                            catch ME
+                                if strcmp(ME.identifier, 'MATLAB:badsubscript')
+                                    fprintf(['Sorry, could not read the variable' ...
+                                        ' name of the EEG data. Please check your' ...
+                                        ' file.\n']) ;
+                                end
+                                rethrow(ME) ;
                             end
-                            rethrow(ME) ;
-                        end    
-                    % Matrix:
-                    else
-                        % If all the files have the same sampling rate, use
-                        % the single user specified value. Otherwise, load 
-                        % the table of sampling rates specified by the user
-                        % and locate the corresponding value from the table
-                        % using the file name.
-                        if params.loadInfo.srate.same
-                            srate = params.loadInfo.srate.val ;
+                            % Matrix:
                         else
-                            srateTable = table2cell(readtable(params.loadInfo.srate.file)) ;
-                            srate = srateTable{contains(list, ...
-                                FileNames{currFile}), 2} ;
+                            % If all the files have the same sampling rate, use
+                            % the single user specified value. Otherwise, load
+                            % the table of sampling rates specified by the user
+                            % and locate the corresponding value from the table
+                            % using the file name.
+                            if params.loadInfo.srate.same
+                                srate = params.loadInfo.srate.val ;
+                            else
+                                srateTable = table2cell(readtable(params.loadInfo.srate.file)) ;
+                                srate = srateTable{contains(list, ...
+                                    FileNames{currFile}), 2} ;
+                            end
+                            % Use the built-in EEGLAB function to load the
+                            % data. Uses the sampling rate determined above and
+                            % the user-specified channel locations. If the user
+                            % did not specify any channel locations, is still
+                            % able to load successfully.
+                            EEGraw = pop_importdata('dataformat', 'matlab', ...
+                                'data', FileNames{currFile}, 'srate', srate, ...
+                                'chanlocs', params.loadInfo.chanlocs.file) ;
                         end
-                        % Use the built-in EEGLAB function to load the
-                        % data. Uses the sampling rate determined above and
-                        % the user-specified channel locations. If the user
-                        % did not specify any channel locations, is still
-                        % able to load successfully.
-                        EEGraw = pop_importdata('dataformat', 'matlab', ...
-                            'data', FileNames{currFile}, 'srate', srate, ...
-                            'chanlocs', params.loadInfo.chanlocs.file) ;
+                        % If task data, import event information using the file
+                        % indicated by the user.
+                        if params.paradigm.task
+                            cd(params.loadInfo.eventLoc) ;
+                            EEGraw = pop_importevent(EEGloaded, 'append', 'no', ...
+                                'event', StimNames{currFile}, 'fields', {'type', ...
+                                'latency', 'status'}, 'skipline', 1, 'timeunit', ...
+                                1E-3, 'align', NaN) ;
+                            origEvents = EEGraw.urevent ;
+                            events = EEGraw.event ;
+                        end
+                    else
+                        % ---------------------------------------------------------
+                        % .RAW FILES
+                        if params.loadInfo.inputFormat == 2
+                            EEGraw = pop_readegi(FileNames{currFile}, [], [], ...
+                                'auto') ;
+                            % ---------------------------------------------------------
+                            % .SET FILES
+                        elseif params.loadInfo.inputFormat == 3
+                            EEGraw = load('-mat', FileNames{currFile}) ;
+                            if isfield(EEGraw, 'EEG'); EEGraw = EEGraw.EEG; end
+                            % ---------------------------------------------------------
+                            % .CDT FILES
+                        elseif params.loadInfo.inputFormat == 4
+                            EEGraw = loadcurry([srcDir filesep ...
+                                FileNames{currFile}], 'CurryLocation', 'false') ;
+                            % ---------------------------------------------------------
+                            % .MFF FILES
+                        elseif params.loadInfo.inputFormat == 5
+                            EEGraw = pop_mffimport(FileNames{currFile} , ...
+                                params.loadInfo.typeFields, 0, 0) ;
+                            % ---------------------------------------------------------
+                        end
+                        % ---------------------------------------------------------
+                        % Determine the sampling rate from the loaded EEG. If task
+                        % related, save the events from the loaded file in its own
+                        % variable.
+                        srate = double(EEGraw.srate) ;
+                        if params.paradigm.task; events = EEGraw.event ; end
                     end
-                    % If task data, import event information using the file
-                    % indicated by the user.
-                    if params.paradigm.task
-                        cd(params.loadInfo.eventLoc) ;
-                        EEGraw = pop_importevent(EEGloaded, 'append', 'no', ...
-                            'event', StimNames{currFile}, 'fields', {'type', ...
-                            'latency', 'status'}, 'skipline', 1, 'timeunit', ...
-                            1E-3, 'align', NaN) ;
-                        origEvents = EEGraw.urevent ;
-                        events = EEGraw.event ;
-                    end    
-                else
-                % ---------------------------------------------------------
-                % .RAW FILES
-                    if params.loadInfo.inputFormat == 2
-                        EEGraw = pop_readegi(FileNames{currFile}, [], [], ...
-                            'auto') ;
-                % ---------------------------------------------------------
-                % .SET FILES
-                    elseif params.loadInfo.inputFormat == 3
-                        EEGraw = load('-mat', FileNames{currFile}) ;
-                        if isfield(EEGraw, 'EEG'); EEGraw = EEGraw.EEG; end
-                % ---------------------------------------------------------
-                % .CDT FILES
-                    elseif params.loadInfo.inputFormat == 4
-                        EEGraw = loadcurry([srcDir filesep ...
-                            FileNames{currFile}], 'CurryLocation', 'false') ;
-                % ---------------------------------------------------------
-                % .MFF FILES
-                    elseif params.loadInfo.inputFormat == 5
-                        EEGraw = pop_mffimport(FileNames{currFile} , ...
-                            params.loadInfo.typeFields, 0, 0) ;
-                    end
-                % ---------------------------------------------------------
-                % Determine the sampling rate from the loaded EEG. If task
-                % related, save the events from the loaded file in its own
-                % variable.
-                    srate = double(EEGraw.srate) ;
-                    if params.paradigm.task; events = EEGraw.event ; end
+                    % ---------------------------------------------------------
                 end
-                % ---------------------------------------------------------
                 % Validate the loaded file using EEGLAB's checkset function
                 fprintf('Validating file...\n') ;
                 EEGraw.setname = 'rawEEG' ;
                 EEG = eeg_checkset(EEGraw) ;
                 dataQC{currFile, 1} = EEG.xmax ;
-            % If unable to load the file, indicate this to the user via the
-            % command line and throw an error.
+                % If unable to load the file, indicate this to the user via the
+                % command line and throw an error.
             catch ME
                 error('HAPPE:LoadFail', ...
                     ['ERROR: Unable to load ' FileNames{currFile} '\n']) ;
@@ -636,11 +657,11 @@ for currFile = 1:length(FileNames)
         % user via the command window that the data could not be segmented.
         cd([srcDir filesep dirNames{contains(dirNames, 'segmenting')}]) ;
         if params.segment.on
-            try EEG = happe_segment(EEG, params) ;
+            try EEG = happe_segment(EEG, params,curr_file) ;
 
                 % SAVE THE SEGMENTED DATASET AS AN INTERMEDIATE FILE
                 pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, inputExt, ...
-                    ['_segmented' rerunExt '.set'])) ;
+                    ['_segmented' rerunExt '.set'])) ;       
             catch ME
                 fprintf(2, 'ERROR: Segmenting failed.\n') ;
                 rethrow(ME) ;
@@ -730,7 +751,9 @@ for currFile = 1:length(FileNames)
                 % SAVE FILE WITH SEGMENTS REJECTED
                 pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
                     inputExt, ['_segments_postrej' rerunExt '.set'])) ;
-            catch ME; rethrow(ME) ;
+            catch ME %continue ; ; YB commented rethrow
+                eegByTags = {};
+                rethrow(ME)
             end
         elseif params.segRej.on && EEG.trials == 1
             error('HAPPE:rejOneSeg', ['ERROR: Cannot reject segments from' ...
@@ -797,7 +820,7 @@ for currFile = 1:length(FileNames)
             for i=1:size(params.paradigm.onsetTags,2)
                 try eegByTags{i} = pop_selectevent(EEG, 'type', ...
                         params.paradigm.onsetTags{i}) ;                   
-                    dataQC_task{currFile, i*3-1} = length(eegByTags(i).epoch) ;
+                    dataQC_task{currFile, i*3-1} = length(eegByTags{i}.epoch) ; %YB CHANGED eegByTags{i}.epoch from eegByTags(i).epoch
                     dataQC_task{currFile, i*3} = dataQC_task{currFile, i*3-1} ...
                         / dataQC_task{currFile, i*3-2}*100 ;
                 catch
@@ -828,6 +851,19 @@ for currFile = 1:length(FileNames)
         cd([srcDir filesep dirNames{contains(dirNames, 'processed')}]) ;
         if params.vis.enabled
            if params.paradigm.ERP.on
+               %% YB adding two if statements to make sure the vis_time_start and vis_time_end are in range
+                %HAPPE was throwing error before so adding this to code so
+                %it doesn't break
+                if isempty(params.vis.min) || params.vis.min < min(EEG.times)
+                    strcat('The starting visualization time you chose:',num2str(params.vis.min),...
+                        'ms exceeds data range, adjusting value now to:',num2str(min(EEG.times)),'ms')
+                    params.vis.min = min(EEG.times);
+                end
+                if isempty(params.vis.max) || params.vis.max > max(EEG.times)
+                        strcat('The ending visualization time you chose:',num2str(params.vis.max),...
+                        'ms exceeds data range, adjusting value now to:',num2str(max(EEG.times)),'ms')
+                    params.vis.max = max(EEG.times);
+                end
                figure; pop_timtopo(EEG, [params.vis.min params.vis.max], ...
                    params.vis.toPlot) ;
                saveas(gcf, strrep(FileNames{currFile}, inputExt, ...
@@ -865,7 +901,7 @@ for currFile = 1:length(FileNames)
         if params.outputFormat == 2
             save(strrep(FileNames{currFile}, inputExt, ['_processed' ...
                 rerunExt '.mat']), 'EEG') ;
-            if params.paradigm.task.on && size(params.paradigm.onsetTags, ...
+            if params.paradigm.task && size(params.paradigm.onsetTags, ... %YB changed params.paradigm.task.on to params.paradigm.task
                     2) > 1
                 for i=1:size(eegByTags, 2)
                     currEEG = eegByTags(i) ;
@@ -891,11 +927,11 @@ for currFile = 1:length(FileNames)
                 'transpose', 'on', 'erp', 'on', 'precision', 8) ;
             if size(params.paradigm.onsetTags, 2) > 1
                 for i=1:size(eegByTags, 2)
-                    pop_export(eegByTags(i), strrep(FileNames{currFile}, ...
+                    pop_export(eegByTags{i}, strrep(FileNames{currFile}, ... %YB changed eegByTags{i} from eegByTags(i)
                         inputExt, ['_processed_IndivTrial' ...
                         params.paradigm.onsetTags{i} rerunExt '.txt']), ...
                         'transpose', 'on', 'precision', 8) ;
-                    pop_export(eegByTags(i), strrep(FileNames{currFile}, ...
+                    pop_export(eegByTags{i}, strrep(FileNames{currFile}, ... %YB changed eegByTags{i} from eegByTags(i)
                         inputExt, ['_processed_AveOverTrials' ...
                         params.paradigm.onsetTags{i} rerunExt '.txt']), ...
                         'transpose', 'on', 'erp', 'on', 'precision', 8) ;
@@ -923,6 +959,9 @@ for currFile = 1:length(FileNames)
     % continue to run over the whole dataset.
     catch ME
         % ADD ERROR TO THE ERROR LOG:
+        if ~exist('eegByTags','var') %yb added
+            eegByTags = {};
+        end
         errorLog = [errorLog; {FileNames{currFile}, ME.message}] ;          %#ok<AGROW> 
         
         % CHECK FOR COMMON ERRORS:
@@ -953,49 +992,50 @@ for currFile = 1:length(FileNames)
             wavMeans = qm_ERROR(wavMeans, 5+length(params.QCfreqs), ...
                 currFile) ;
         end
+        continue
     end
 end
 
-%% GENERATE OUTPUT TABLES
-fprintf('Generating quality assessment outputs...\n') ;
-cd([srcDir filesep dirNames{contains(dirNames, ...
-    'quality_assessment_outputs')}]) ;
-rmpath(genpath(cleanlineDir)) ;
-try
-    % CREATE AND SAVE PIPELINE QUALITY ASSESSMENT
-    if ~reprocess
-        % Create line noise reduction names.
-        lnNames = {'r all freqs pre/post linenoise reduction'} ;
-        for i=2:size(params.lineNoise.neighbors, 2)+1
-            lnNames{i} = ['r ' num2str(params.lineNoise.neighbors(i-1)) ...
-                ' hz pre/post linenoise reduction'] ;
-        end
-        for i=1:size(params.lineNoise.harms.freqs, 2)
-            lnNames{i+size(params.lineNoise.neighbors, 2)+1} = ['r ' num2str(params.lineNoise.harms.freqs) ...
-                ' hz pre/post harmonic reduction'] ;
-        end
-        
-        % Create wavelet thresholding names.
-        wavNames = {'RMSE post/pre waveleting', 'MAE post/pre waveleting', ...
-            'SNR post/pre waveleting', 'PeakSNR post/pre waveleting', ...
-            'r alldata post/pre waveleting'} ;
-        for i=1:size(params.QCfreqs,2)
-            wavNames{i+5} = ['r ' num2str(params.QCfreqs(i)) ' hz post/pre ' ...
-                'waveleting'] ;
-        end
-
-        % Concat the Names and QC matrices.
-        pipelineQC_names = [(lnNames) (wavNames)] ;
-        pipelineQC = [(lnMeans) (wavMeans)] ;
-        
-        % Save the pipeline QC table.
-        pipelineQC_saveName = helpName(['HAPPE_pipelineQC' rerunExt '_' ...
-            datestr(now, 'dd-mm-yyyy') '.csv']) ;
-        writetable(array2table(pipelineQC, 'VariableNames', pipelineQC_names, ...
-            'RowNames', FileNames), pipelineQC_saveName, 'WriteRowNames', ...
-            true, 'QuoteStrings', true);
-    end
-
+% %% GENERATE OUTPUT TABLES
+% fprintf('Generating quality assessment outputs...\n') ;
+% cd([srcDir filesep dirNames{contains(dirNames, ...
+%     'quality_assessment_outputs')}]) ;
+% rmpath(genpath(cleanlineDir)) ;
+ %try
+%     % CREATE AND SAVE PIPELINE QUALITY ASSESSMENT
+%     if ~reprocess
+%         % Create line noise reduction names.
+%         lnNames = {'r all freqs pre/post linenoise reduction'} ;
+%         for i=2:size(params.lineNoise.neighbors, 2)+1
+%             lnNames{i} = ['r ' num2str(params.lineNoise.neighbors(i-1)) ...
+%                 ' hz pre/post linenoise reduction'] ;
+%         end
+%         for i=1:size(params.lineNoise.harms.freqs, 2)
+%             lnNames{i+size(params.lineNoise.neighbors, 2)+1} = ['r ' num2str(params.lineNoise.harms.freqs) ...
+%                 ' hz pre/post harmonic reduction'] ;
+%         end
+%         
+%         % Create wavelet thresholding names.
+%         wavNames = {'RMSE post/pre waveleting', 'MAE post/pre waveleting', ...
+%             'SNR post/pre waveleting', 'PeakSNR post/pre waveleting', ...
+%             'r alldata post/pre waveleting'} ;
+%         for i=1:size(params.QCfreqs,2)
+%             wavNames{i+5} = ['r ' num2str(params.QCfreqs(i)) ' hz post/pre ' ...
+%                 'waveleting'] ;
+%         end
+% 
+%         % Concat the Names and QC matrices.
+%         pipelineQC_names = [(lnNames) (wavNames)] ;
+%         pipelineQC = [(lnMeans) (wavMeans)] ;
+%         
+%         % Save the pipeline QC table.
+%         pipelineQC_saveName = helpName(['HAPPE_pipelineQC' rerunExt '_' ...
+%             datestr(now, 'dd-mm-yyyy') '.csv']) ;
+%        % writetable(array2table(pipelineQC, 'VariableNames', pipelineQC_names, ...
+%         %    'RowNames', FileNames), pipelineQC_saveName, 'WriteRowNames', ...
+%          %   true, 'QuoteStrings', true);
+%     end
+% 
     % CREATE AND SAVE DATA QUALITY ASSESSMENT
     % Concat Names and QC matrices according to the presence or absence of
     % multiple onset tags and conditions.
@@ -1010,24 +1050,23 @@ try
     
     % Save the data QC table.
     dataQC_saveName = helpName(['HAPPE_dataQC' rerunExt '_' datestr(now, ...
-        'dd-mm-yyyy') '.csv']) ;
-    writetable(cell2table(dataQC, 'VariableNames', dataQCnames, 'RowNames', ...
-        FileNames), dataQC_saveName, 'WriteRowNames', true, 'QuoteStrings', ...
-        true) ;
+         'dd-mm-yyyy') '.csv']) ;
+    dataQCTab = cell2table(dataQC, 'VariableNames', dataQCnames, 'RowNames', FileNames);
+     writetable(dataQCTab, dataQC_saveName, 'WriteRowNames', true, 'QuoteStrings', ...
+         true) ;
 
 % ERRORS IN WRITING OUTPUTS:
-catch ME
-    % Add the error to the error log.
-    errorLog = [errorLog; {'Outputs', ME.message}] ;
-
-    % Check for a common error, usually caused by the inability to process
-    % any files at all or to completion.
-    if strcmp(ME.identifier, 'MATLAB:table:IncorrectNumberOfVarNames')
-        fprintf(2, ['ERROR: HAPPE was unable to process any of your files.' ...                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
-            '\nTo troubleshoot, check your command window and error log.\n']) ;
-    end
-end
-
+%catch ME
+%     % Add the error to the error log.
+%     errorLog = [errorLog; {'Outputs', ME.message}] ;
+% 
+%     % Check for a common error, usually caused by the inability to process
+%     % any files at all or to completion.
+%     if strcmp(ME.identifier, 'MATLAB:table:IncorrectNumberOfVarNames')
+%         fprintf(2, ['ERROR: HAPPE was unable to process any of your files.' ...                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+%             '\nTo troubleshoot, check your command window and error log.\n']) ;
+%     end
+% end
 %% SAVE ERROR LOG
 % If there were any errors while running HAPPE, save an error log so the
 % user can troubleshoot.

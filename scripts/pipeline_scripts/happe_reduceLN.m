@@ -71,8 +71,9 @@ else
         'maximumIterations', 10)) ;
 end
 
-% LINE NOISE REDUCTION QM: Assesses the performance of line noise reduction.
-lnMeans = assessPipelineStep('line noise reduction', reshape(inEEG.data, ...
-    size(inEEG.data, 1), []), reshape(outEEG.data, size(outEEG.data,1), ...
-    []), lnMeans, inEEG.srate, [lnParams.neighbors lnParams.harms.freqs]) ;
+% LINE NOISE REDUCTION QM: Assesses the performance of line noise
+% reduction. YB COMMENTED FOR NOW
+lnMeans = []; % assessPipelineStep('line noise reduction', reshape(inEEG.data, ...
+%   size(inEEG.data, 1), []), reshape(outEEG.data, size(outEEG.data,1), ...
+  % []), lnMeans, inEEG.srate, [lnParams.neighbors lnParams.harms.freqs]) ;
 end

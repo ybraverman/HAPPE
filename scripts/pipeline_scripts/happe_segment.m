@@ -34,7 +34,7 @@
 % You should have received a copy of the GNU General Public License along
 % with HAPPE. If not, see <https://www.gnu.org/licenses/>.
 
-function EEG = happe_segment(EEG, params)
+function EEG = happe_segment(EEG, params,curr_file)
 if EEG.trials == 1
     fprintf('Segmenting...\n') ;
     % TASK/ERP - SEGMENT USING TAGS
@@ -42,18 +42,23 @@ if EEG.trials == 1
         % For ERPs, adjust the event latencies by the user-specified
         % offset.
         if params.paradigm.ERP.on
-            sampOffset = EEG.srate*params.segment.offset/1000 ;
-            for i = 1:size(EEG.event, 2); EEG.event(i).latency = ...
-                    EEG.event(i).latency + sampOffset ; end
-        end
-        
+            if length(params.segment.offset)>1
+                sampOffset = EEG.srate*params.segment.offset(curr_file)/1000 ; %YB added curr_file
+            elseif length(params.segment.offset) == 1
+                sampOffset = EEG.srate*params.segment.offset/1000 ; %YB added curr_file
+            end
+            %yb commented out bc already offset during beapp formatting
+          %  for i = 1:size(EEG.event, 2); EEG_2.event(i).latency = ...
+                  %  EEG.event(i).latency + sampOffset ; end
+       end
+     %   
         % Try segmenting the data using user-specified tags, catching any
         % errors that occur in the process. If unable to find any of the
         % tags, will throw a specific error to help the user troubleshoot.
         try
             EEG = pop_epoch(EEG, params.paradigm.onsetTags, ...
                 [params.segment.start, params.segment.end], 'verbose', ...
-                'no', 'epochinfo', 'yes') ;
+                'yes');% 'epochinfo', 'yes') ;
         catch ME
             if strcmp(ME.message, ['pop_epoch(): empty epoch range (no ' ...
                     'epochs were found).'])
