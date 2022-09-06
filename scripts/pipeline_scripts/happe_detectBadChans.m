@@ -88,7 +88,6 @@ else
             'Euclidian') ;
     end
 end
-
 % BAD CHANNEL DETECTION QC: Assesses the performance of bad channel 
 % rejection. Metrics include the number of channels included in processing
 % (good channels), the percent of good channels selected from the original 
@@ -96,9 +95,12 @@ end
 disp('Evaluating bad channel detection...') ;
 dataQC{currFile,3} = size(EEG.chanlocs,2) ;
 dataQC{currFile, 4} = dataQC{currFile,3}/dataQC{currFile,2}*100 ;
-badChans = setdiff(chanIDs, {EEG.chanlocs.labels}, ...
-    'stable') ;
-if isempty(badChans); dataQC{currFile, 5} = 'None' ;
-else; dataQC{currFile,5} = [sprintf('%s ', badChans{1:end-1}), badChans{end}] ;
+if ~isempty(EEG.chanlocs)
+    badChans = setdiff(chanIDs, {EEG.chanlocs.labels}, ...
+        'stable') ;
+    if isempty(badChans); dataQC{currFile, 5} = 'None' ;
+    else; dataQC{currFile,5} = [sprintf('%s ', badChans{1:end-1}), badChans{end}] ;
+    end
+else; dataQC{currFile,5} = 'NA' ;
 end
 end

@@ -87,7 +87,7 @@ else
     end
     
     % Use wavelet thresholding to determine artifacts in the data.
-    artifacts = wdenoise(reshape(EEG.data, size(EEG.data, 1), [])', wavLvl, ...
+    artifacts = wdenoise(reshape(double(EEG.data), size(EEG.data, 1), [])', wavLvl, ...
         'Wavelet', 'coif4', 'DenoisingMethod', 'Bayes', 'ThresholdRule', ...
         ThresholdRule, 'NoiseEstimate', 'LevelDependent')' ;
 end
@@ -96,7 +96,7 @@ end
 % the EEG signal and save the wavcleaned data into an EEGLAB structure. If 
 % conducting ERP analyses, filter the data to the user-specified frequency 
 % range for analyses purposes only.
-if params.paradigm.ERP.on
+if  params.paradigm.ERP.on 
     preEEG = reshape(pop_eegfiltnew(EEG, params.paradigm.ERP.highpass, ...
         params.paradigm.ERP.lowpass, [], 0, [], 0).data, size(EEG.data, 1), ...
         []) ;
@@ -112,10 +112,8 @@ end
 EEG.setname = 'wavcleanedEEG' ;
 
 % WAVELETING QC METRICS: Assesses the performance of wavelet thresholding.
-% YB COMMENTED FOR Memory issue
-wavMeans = []; 
-%assessPipelineStep('wavelet thresholding', preEEG, postEEG, ...
-   % wavMeans, EEG.srate, params.QCfreqs) ;
+wavMeans = assessPipelineStep('wavelet thresholding', preEEG, postEEG, ...
+   wavMeans, EEG.srate, params.QCfreqs) ;
 % DATA QC METRICS: Add the variance retained to the data QC matrix.
-dataQC{currFile, 6} = [];% var(postEEG, 1, 'all')/var(preEEG, 1, 'all')*100 ;
+dataQC{currFile, 6} = var(postEEG, 1, 'all')/var(preEEG, 1, 'all')*100 ;
 end
