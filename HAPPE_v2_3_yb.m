@@ -1,6 +1,5 @@
 %~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 % HAPPE Version 3.0
-%
 % Developed at Northeastern University's PINE Lab
 %
 % For a detailed description of the pipeline and user options, please see 
@@ -73,41 +72,43 @@
 % contributors are under no obligation to provide maintenance, support, 
 % updates, enhancements, or modifications.
 %~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-function [eegByTags,params, dataQC, dataQCTab,lnMeans,wavMeans] = HAPPE_v2_3_yb(EEGraw, grp_proc_info_in,FileNames,curr_file)
+function [eeg_out,dataQC,chan_info,lnMeans,wavMeans,errorLog] = HAPPE_v2_3_yb(params,EEGraw, reprocess,FileNames,srcDir,dirNames)
 %% CLEAR THE WORKSPACE
 %clear ;
+no_filt = 1;
 
 %% SET FOLDERS FOR HAPPE AND EEGLAB PATHS
-fprintf('Preparing HAPPE...\n') ;
-% SET HAPPE AND EEGLAB PATHS USING THE RUNNING SCRIPT
-happeDir = fileparts(which(mfilename('fullpath'))) ;
-eeglabDir = [happeDir filesep 'Packages' filesep 'eeglab2022.0'] ;
-
-% ADD HAPPE AND REQUIRED FOLDERS TO PATH
-addpath([happeDir filesep 'acquisition_layout_information'], ...
-    [happeDir filesep 'scripts'], ...
-    [happeDir filesep 'scripts' filesep 'UI_scripts'], ...
-    [happeDir filesep 'scripts' filesep 'pipeline_scripts'], ...
-    eeglabDir, genpath([eeglabDir filesep 'functions'])) ;
-rmpath(genpath([eeglabDir filesep 'functions' filesep 'octavefunc'])) ;
-
-% ADD EEGLAB FOLDERS TO PATH
-pluginDir = dir([eeglabDir filesep 'plugins']) ;
-pluginDir = strcat(eeglabDir, filesep, 'plugins', filesep, {pluginDir.name}, ';') ;
-addpath([pluginDir{:}]) ;
-
-% ADD CLEANLINE FOLDERS TO PATH
-if exist('cleanline', 'file')
-    cleanlineDir = which('eegplugin_cleanline.m') ;
-    cleanlineDir = cleanlineDir(1:strfind(cleanlineDir, 'eegplugin_cleanline.m')-1) ;
-    addpath(genpath(cleanlineDir)) ;
-else; error('Please make sure cleanline is on your path') ;
-end
+% fprintf('Preparing HAPPE...\n') ; YB COMMENTED SECTION - happening
+% outside of happe in beapp
+% % SET HAPPE AND EEGLAB PATHS USING THE RUNNING SCRIPT
+% happeDir = fileparts(which(mfilename('fullpath'))) ;
+% eeglabDir = [happeDir filesep 'Packages' filesep 'eeglab2022.0'] ;
+% 
+% % ADD HAPPE AND REQUIRED FOLDERS TO PATH
+% addpath([happeDir filesep 'acquisition_layout_information'], ...
+%     [happeDir filesep 'scripts'], ...
+%     [happeDir filesep 'scripts' filesep 'UI_scripts'], ...
+%     [happeDir filesep 'scripts' filesep 'pipeline_scripts'], ...
+%     eeglabDir, genpath([eeglabDir filesep 'functions'])) ;
+% rmpath(genpath([eeglabDir filesep 'functions' filesep 'octavefunc'])) ;
+% 
+% % ADD EEGLAB FOLDERS TO PATH
+% pluginDir = dir([eeglabDir filesep 'plugins']) ;
+% pluginDir = strcat(eeglabDir, filesep, 'plugins', filesep, {pluginDir.name}, ';') ;
+% addpath([pluginDir{:}]) ;
+% 
+% % ADD CLEANLINE FOLDERS TO PATH
+% if exist('cleanline', 'file')
+%     cleanlineDir = which('eegplugin_cleanline.m') ;
+%     cleanlineDir = cleanlineDir(1:strfind(cleanlineDir, 'eegplugin_cleanline.m')-1) ;
+%     addpath(genpath(cleanlineDir)) ;
+% else; error('Please make sure cleanline is on your path') ;
+% end
 
 %% DETERMINE AND SET PATH TO DATA
 % Use input from the command line to set the path to the data. If an 
 % % invalid path is entered, repeat until a valid path is entered.YB
-% COMMENTED
+% COMMENTED happening outside of happe in beapp
 % while true
 %     srcDir = input('Enter the path to the folder containing the dataset(s):\n> ','s') ;
 %     if exist(srcDir, 'dir') == 7; break ;
@@ -115,19 +116,19 @@ end
 %             'folder containing the dataset(s).\n']) ;
 %     end
 % end
-srcDir = fullfile(grp_proc_info_in.src_dir{1,1},strcat('HAPPE+ER_',grp_proc_info_in.beapp_curr_run_tag)); % YB ADDED enters path to folder containing datasets
-
-cd (srcDir) ;
+% srcDir = fullfile(grp_proc_info_in.src_dir{1,1},strcat('HAPPE+ER_',grp_proc_info_in.beapp_curr_run_tag)); % YB ADDED enters path to folder containing datasets
+% 
+% cd (srcDir) ;
 
 %% DETERMINE IF REPROCESSING DATA
 %[reprocess, rerunExt] = isReprocessed() ; YB commented
 % YB added - automatically creates new files and uses default naming, could
 % change later
-if grp_proc_info_in.HAPPE_ER_reprocessing
-    reprocess = 1;
+if reprocess
+  %  reprocess = 1;
     rerunExt = ['_rerun_' datestr(now, 'dd-mm-yyyy')];
 else
-    reprocess = 0;
+   % reprocess = 0;
     rerunExt = '';
 end
 %% DETERMINE IF USING PRESET PARAMETERS
@@ -135,11 +136,11 @@ version = '2_3_0' ; %yb changed ver to version b/c there was overlap w eeglb var
 %[preExist, params, changeParams] = isPreExist(reprocess, ver) ; YB
 %COMMENTED and added line below, setting preExist to 1 bc dealt w earlier
 %and changer params to 0 and loading pre-existing param file from path
-preExist = 1;  load(grp_proc_info_in.HAPPE_ER_parameters_file_location{1,1}) ; changeParams = 0;
+preExist = 1;  %load(grp_proc_info_in.HAPPE_ER_parameters_file_location{1,1}) ; YB commented, happening outside of happe
+changeParams = 0;
 
 %% SET PARAMETERS
-%YB commented - these steps will be dealt with using
-%beapp_translate_to_happe_inputs.m
+%YB commented, already dealt with before hand
 %params = setParams(params, preExist, reprocess, changeParams, happeDir) ;
 
 %% SAVE INPUT PARAMETERS
@@ -177,25 +178,25 @@ if ~preExist || changeParams
     fprintf('Parameters saved.') ;
 end
 
-%% CREATE OUTPUT FOLDERS
-% Create the folders in which to store intermediate and final outputs.
-% If you aren't running ERP analyses, don't add the ERP_filtered folder.
-cd(srcDir) ;
-fprintf('Creating output folders...\n') ;
-allDirNames = {'intermediate_processing', 'wavelet_cleaned_continuous', ...
-    'muscIL', 'ERP_filtered', 'segmenting', 'processed', ...
-    'quality_assessment_outputs'} ;
-if ~params.paradigm.ERP.on; allDirNames(ismember(allDirNames, 'ERP_filtered')) = []; end
-if ~params.muscIL; allDirNames(ismember(allDirNames, 'muscIL')) = []; end
-dirNames = cell(1,size(allDirNames,2)) ;
-for i=1:length(allDirNames)
-    dirNames{i} = [num2str(i) ' - ' allDirNames{i}] ;
-    if ~isfolder([srcDir filesep num2str(i) ' - ' allDirNames{i}])
-        mkdir([srcDir filesep num2str(i) ' - ' allDirNames{i}]) ;
-    end
-end
-clear('allDirNames') ;
-fprintf('Output folders created.\n') ;
+% %% CREATE OUTPUT FOLDERS YB COMMENTED HAPPENING OUTSIDE OF HAPPE
+% % Create the folders in which to store intermediate and final outputs.
+% % If you aren't running ERP analyses, don't add the ERP_filtered folder.
+% cd(srcDir) ;
+% fprintf('Creating output folders...\n') ;
+% allDirNames = {'intermediate_processing', 'wavelet_cleaned_continuous', ...
+%     'muscIL', 'ERP_filtered', 'segmenting', 'processed', ...
+%     'quality_assessment_outputs'} ;
+% if ~params.paradigm.ERP.on; allDirNames(ismember(allDirNames, 'ERP_filtered')) = []; end
+% if ~params.muscIL; allDirNames(ismember(allDirNames, 'muscIL')) = []; end
+% dirNames = cell(1,size(allDirNames,2)) ;
+% for i=1:length(allDirNames)
+%     dirNames{i} = [num2str(i) ' - ' allDirNames{i}] ;
+%     if ~isfolder([srcDir filesep num2str(i) ' - ' allDirNames{i}])
+%         mkdir([srcDir filesep num2str(i) ' - ' allDirNames{i}]) ;
+%     end
+% end
+% clear('allDirNames') ;
+% fprintf('Output folders created.\n') ;
 
 %% COLLECT DATA TO RUN
 fprintf('Gathering files...\n') ;
@@ -216,44 +217,45 @@ if params.loadInfo.inputFormat == 1 && params.paradigm.task
     % ***
 end
 
-%% INITIALIZE QUALITY REPORT METRICS
-fprintf('Initializing report metrics...\n') ;
+%% INITIALIZE QUALITY REPORT METRICS YB commented out names, pass
+%fprintf('Initializing report metrics...\n') ;
 % DATA QUALITY METRICS: create a variable holding all the names of each
 % metric and a variable to hold the metrics for each file.
-dataQCnames = {'File_Length_in_Seconds', 'Number_User-Selected_Chans', ...
-    'Number_Good_Chans_Selected', 'Percent_Good_Chans_Selected', 'Bad_Chan_IDs', ...
-    'Percent_Var_Retained_Post-Wav', 'Number_ICs_Rej', 'Percent_ICs_Rej', ...
-    'Chans_Interpolated_per_Seg', 'Number_Segs_Pre-Seg_Rej', ...
-    'Number_Segs_Post-Seg_Rej', 'Percent_Segs_Post-Seg_Rej'} ;
-dataQC = cell(length(FileNames), length(dataQCnames)) ;
+% dataQCnames = {'File_Length_in_Seconds', 'Number_User-Selected_Chans', ...
+%     'Number_Good_Chans_Selected', 'Percent_Good_Chans_Selected', 'Bad_Chan_IDs', ...
+%     'Percent_Var_Retained_Post-Wav', 'Number_ICs_Rej', 'Percent_ICs_Rej', ...
+%     'Chans_Interpolated_per_Seg', 'Number_Segs_Pre-Seg_Rej', ...
+%     'Number_Segs_Post-Seg_Rej', 'Percent_Segs_Post-Seg_Rej'} ;
+%dataQC = cell(length(FileNames), length(dataQCnames)) ;
+dataQC = cell(length(FileNames), 12) ; %YB hardcoded 12 since dataQCnames is getting defined outside of happe now 
 % If processing for tasks, create an additional variable to hold specific
 % data metrics for each onset tag.
 if params.paradigm.task
     dataQC_task = cell(length(FileNames), length(params.paradigm.onsetTags)*3) ;
-    dataQCnames_task = cell(1, length(params.paradigm.onsetTags)*3) ;
-    for i=1:size(params.paradigm.onsetTags,2)
-        dataQCnames_task{i*3-2} = ['Number_' params.paradigm.onsetTags{i} ...
-            '_Segs_Pre-Seg_Rej'] ;
-        dataQCnames_task{i*3-1} = ['Number_' params.paradigm.onsetTags{i} ...
-            '_Segs_Post-Seg_Rej'] ;
-        dataQCnames_task{i*3} = ['Percent_' params.paradigm.onsetTags{i} ...
-            '_Segs_Post-Seg_Rej'] ;
-    end
+    % dataQCnames_task = cell(1, length(params.paradigm.onsetTags)*3) ;
+%     for i=1:size(params.paradigm.onsetTags,2)
+%         dataQCnames_task{i*3-2} = ['Number_' params.paradigm.onsetTags{i} ...
+%             '_Segs_Pre-Seg_Rej'] ;
+%         dataQCnames_task{i*3-1} = ['Number_' params.paradigm.onsetTags{i} ...
+%             '_Segs_Post-Seg_Rej'] ;
+%         dataQCnames_task{i*3} = ['Percent_' params.paradigm.onsetTags{i} ...
+%             '_Segs_Post-Seg_Rej'] ;
+%     end
     
     % If grouping any tags by condition, create additional variable to hold
     % specific data metrics for each condition.
     if params.paradigm.conds.on
         dataQC_conds = cell(length(FileNames), ...
             size(params.paradigm.conds.groups,1)*3) ;
-        dataQCnames_conds = cell(1, size(params.paradigm.conds.groups,1)*3) ;
-        for i = 1:size(params.paradigm.conds.groups,1)
-            dataQCnames_conds{i*3-2} = ['Number_' params.paradigm.conds.groups{i, ...
-                1} '_Segs_Pre-Seg_Rej'] ;
-            dataQCnames_conds{i*3-1} = ['Number_' params.paradigm.conds.groups{i, ...
-                1} '_Segs_Post-Seg_Rej'] ;
-            dataQCnames_conds{i*3} = ['Percent_' params.paradigm.conds.groups{i, ...
-                1} '_Segs_Post-Seg_Rej'] ;
-        end
+%         dataQCnames_conds = cell(1, size(params.paradigm.conds.groups,1)*3) ;
+%         for i = 1:size(params.paradigm.conds.groups,1)
+%             dataQCnames_conds{i*3-2} = ['Number_' params.paradigm.conds.groups{i, ...
+%                 1} '_Segs_Pre-Seg_Rej'] ;
+%             dataQCnames_conds{i*3-1} = ['Number_' params.paradigm.conds.groups{i, ...
+%                 1} '_Segs_Post-Seg_Rej'] ;
+%             dataQCnames_conds{i*3} = ['Percent_' params.paradigm.conds.groups{i, ...
+%                 1} '_Segs_Post-Seg_Rej'] ;
+%         end
     end
 end
 errorLog = {} ;
@@ -261,7 +263,8 @@ errorLog = {} ;
 % PIPELINE QUALITY METRICS: initialize the variables to hold the pipeline
 % quality metrics for assessing HAPPE performance on line noise reduction
 % and waveleting.
-if ~reprocess; lnMeans = [] ; wavMeans = [] ; end
+%if ~reprocess;  YB COMMENTED OUT IF REPROCESS
+lnMeans = [] ; wavMeans = [] ; %end
 if params.muscIL; icaMeans = [] ; end
 
 %% RUN THE PROCESSING PIPELINE OVER EACH FILE
@@ -414,8 +417,8 @@ for currFile = 1:length(FileNames)
             % If the reference channel is included in the data, remove it
             % from the data channels. This will prevent it from being 
             % falsely flagged as a bad channel.
-            if params.loadInfo.chanlocs.inc && params.reref.on %&& ...
-                   % params.reref.flat
+            if params.loadInfo.chanlocs.inc && params.reref.on && ...
+                    params.reref.flat
                 if ismember(params.reref.chan, {EEG.chanlocs.labels})
                     indx = find(strcmpi({EEG.chanlocs.labels}, ...
                         params.reref.chan)) ;
@@ -464,6 +467,7 @@ for currFile = 1:length(FileNames)
             % fails during this step, alert the user that processing failed
             % during the line noise step in the command window and rethrow
             % the error to proceed to the next file.
+           if no_filt == 1
             try
                 [EEG, lnMeans] = happe_reduceLN(EEG, params.lineNoise, ...
                     lnMeans) ;
@@ -472,6 +476,7 @@ for currFile = 1:length(FileNames)
                 fprintf(2, 'ERROR: Line noise reduction failed.\n') ;
                 rethrow(ME) ;
             end
+           end
             
             %% RESAMPLE DATA
             % If the user enabled downsampling, resample the data to the
@@ -489,9 +494,11 @@ for currFile = 1:length(FileNames)
             % Filter the EEG data. For ERP paradigms, only use a 100 Hz
             % bandpass. For all other paradigms, filter the data using both
             % a 1 Hz highpass and a 100 Hz lowpass.
+            if no_filt == 1
             if params.paradigm.ERP.on; EEG = pop_eegfiltnew(EEG, [], 100, ...
                     [], 0, [], 0) ;
             else; EEG = pop_eegfiltnew(EEG, 1, 100, [], 0, [], 0) ;
+            end
             end
             EEG.setname = [EEG.setname '_filt'] ;
             
@@ -529,12 +536,14 @@ for currFile = 1:length(FileNames)
             % the error to proceed to the next file.
             cd([srcDir filesep dirNames{contains(dirNames, ...
                 'wavelet_cleaned_continuous')}]) ;
+          % if no_filt == 1
             try [EEG, wavMeans, dataQC] = happe_wavThresh(EEG, params, ...
                     wavMeans, dataQC, currFile) ;
             catch ME
                 fprintf(2, 'ERROR: Wavelet thresholding failed.\n') ;
                 rethrow(ME) ;
             end
+          % end
             
             % Save the wavelet-thresholded EEG as an intermediate output.
             pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
@@ -604,6 +613,7 @@ for currFile = 1:length(FileNames)
         % this step, alert the user that processing failed during 
         % filtering to ERP cutoffs in the command window and rethrow
         % the error to proceed to the next file.
+        if no_filt == 1
         if params.paradigm.ERP.on
             fprintf('Filtering using ERP cutoffs...\n') ;
             cd([srcDir filesep dirNames{contains(dirNames, ...
@@ -615,6 +625,7 @@ for currFile = 1:length(FileNames)
                 % documentation for more information). Currently only
                 % available for ERP paradigms.
                 if params.filt.butter
+                    EEG.data = double(EEG.data);
                     EEG = butterFilt(EEG, params.paradigm.ERP.lowpass, ...
                         params.paradigm.ERP.highpass) ;
                 % If the user indicated to use EEGLAB's FIR filter,
@@ -628,7 +639,7 @@ for currFile = 1:length(FileNames)
                 fprintf(2, 'ERROR: Filtering to ERP cutoffs failed.\n') ;
                 rethrow(ME) ;
             end
-
+        end
             % Save the filtered EEG as an intermediate output.
             pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
                 inputExt, ['_wavcleaned_filteredERP' rerunExt '.set'])) ;
@@ -639,7 +650,7 @@ for currFile = 1:length(FileNames)
         % is unable to find the designated channel, throw an error to
         % proceed to the next file and alert the user via the command
         % window.
-        if params.loadInfo.chanlocs.inc && params.reref.on %&& params.reref.flat
+        if params.loadInfo.chanlocs.inc && params.reref.on && params.reref.flat
             try
                 EEG.data(EEG.nbchan+1,:) = 0 ;
                 EEG.nbchan = EEG.nbchan + 1 ;
@@ -657,7 +668,7 @@ for currFile = 1:length(FileNames)
         % user via the command window that the data could not be segmented.
         cd([srcDir filesep dirNames{contains(dirNames, 'segmenting')}]) ;
         if params.segment.on
-            try EEG = happe_segment(EEG, params,curr_file) ;
+            try EEG = happe_segment(EEG, params) ;
 
                 % SAVE THE SEGMENTED DATASET AS AN INTERMEDIATE FILE
                 pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, inputExt, ...
@@ -675,8 +686,15 @@ for currFile = 1:length(FileNames)
         if params.paradigm.task
             % Segments per Event Tag:
             for i=1:length(params.paradigm.onsetTags)
-                try dataQC_task{currFile, i*3-2} = length(pop_selectevent(EEG, ...
-                       'type', params.paradigm.onsetTags{i}).epoch) ;
+                try 
+                    dataQC_task{currFile, i*3-2} = length(pop_selectevent(EEG, ...
+                       'type', params.paradigm.onsetTags{i}).epoch);
+                    if (dataQC_task{currFile, i*3-2} == 0) && ((pop_selectevent(EEG, ...
+                       'type', params.paradigm.onsetTags{i}).trials) == 1)
+                        dataQC_task{currFile, i*3-2} = 1; %yb added above lines to account for single trial edge case
+                    %YB commented and changed to above length(pop_selectevent(EEG, ...
+                     %  'type', params.paradigm.onsetTags{i}).epoch) ;
+                    end
                 catch
                     dataQC_task{currFile, i*3-2} = 0 ;
                     fprintf('No instances of "%s" in this file.\n', ...
@@ -821,6 +839,11 @@ for currFile = 1:length(FileNames)
                 try eegByTags{i} = pop_selectevent(EEG, 'type', ...
                         params.paradigm.onsetTags{i}) ;                   
                     dataQC_task{currFile, i*3-1} = length(eegByTags{i}.epoch) ; %YB CHANGED eegByTags{i}.epoch from eegByTags(i).epoch
+                     if  dataQC_task{currFile, i*3-1} == 0 && eegByTags.trials == 1
+                        dataQC_task{currFile, i*3-2} = 1; %yb added above lines to account for single trial edge case
+                    %YB commented and changed to above length(pop_selectevent(EEG, ...
+                     %  'type', params.paradigm.onsetTags{i}).epoch) ;
+                    end
                     dataQC_task{currFile, i*3} = dataQC_task{currFile, i*3-1} ...
                         / dataQC_task{currFile, i*3-2}*100 ;
                 catch
@@ -876,7 +899,8 @@ for currFile = 1:length(FileNames)
                    ['_processedSpectrum' rerunExt '.jpg'])) ;
            end
         end
-        
+        %% yb added
+        chan_info = EEG.chanlocs;
         %% SAVE PRE-PROCESSED DATASET(S)
         fprintf('Saving pre-processed dataset(s)...\n') ;
         if params.outputFormat == 1 || params.outputFormat == 3
@@ -951,7 +975,12 @@ for currFile = 1:length(FileNames)
                 end
             end
         end
-        
+        %YB added , set eeg_out variables
+        if ~params.paradigm.task
+            eeg_out = EEG;
+        elseif params.paradigm.task
+             eeg_out = eegByTags;
+        end
     %% ERRORS
     % If HAPPE errors out, check first for common failures, and indicate
     % the cause in the data and pipeline quality assessments. If an
@@ -959,8 +988,11 @@ for currFile = 1:length(FileNames)
     % continue to run over the whole dataset.
     catch ME
         % ADD ERROR TO THE ERROR LOG:
-        if ~exist('eegByTags','var') %yb added
-            eegByTags = {};
+        if ~exist('eeg_out','var') %yb added
+            eeg_out = {};
+        end
+        if ~exist('chan_info','var')
+            chan_info = [];
         end
         errorLog = [errorLog; {FileNames{currFile}, ME.message}] ;          %#ok<AGROW> 
         
@@ -1040,20 +1072,20 @@ end
     % Concat Names and QC matrices according to the presence or absence of
     % multiple onset tags and conditions.
     if params.paradigm.task && size(params.paradigm.onsetTags,2) > 1
-        dataQCnames = [dataQCnames dataQCnames_task] ;
+      %  dataQCnames = [dataQCnames dataQCnames_task] ; YB commented
         dataQC = [dataQC dataQC_task] ;
         if params.paradigm.conds.on
-            dataQCnames = [dataQCnames dataQCnames_conds] ;
+           % dataQCnames = [dataQCnames dataQCnames_conds] ; YB commented
             dataQC = [dataQC dataQC_conds] ;
         end
     end
     
     % Save the data QC table.
-    dataQC_saveName = helpName(['HAPPE_dataQC' rerunExt '_' datestr(now, ...
-         'dd-mm-yyyy') '.csv']) ;
-    dataQCTab = cell2table(dataQC, 'VariableNames', dataQCnames, 'RowNames', FileNames);
-     writetable(dataQCTab, dataQC_saveName, 'WriteRowNames', true, 'QuoteStrings', ...
-         true) ;
+   % dataQC_saveName = helpName(['HAPPE_dataQC' rerunExt '_' datestr(now, ...
+      %   'dd-mm-yyyy') '.csv']) ;
+  %  dataQCTab = cell2table(dataQC, 'VariableNames', dataQCnames, 'RowNames', FileNames);
+  %   writetable(dataQCTab, dataQC_saveName, 'WriteRowNames', true, 'QuoteStrings', ...
+       %  true) ;
 
 % ERRORS IN WRITING OUTPUTS:
 %catch ME
@@ -1070,10 +1102,10 @@ end
 %% SAVE ERROR LOG
 % If there were any errors while running HAPPE, save an error log so the
 % user can troubleshoot.
-if ~isempty(errorLog)
-    fprintf('Saving error log...\n') ;
-    errTabName = helpName(['HAPPE_errorLog_' datestr(now, 'dd-mm-yyyy') ...
-        '.csv']) ;
-    writetable(cell2table(errorLog, 'VariableNames', {'File', ...
-        'Error Message'}), errTabName, 'QuoteStrings', 1) ;
-end
+% if ~isempty(errorLog)
+%     fprintf('Saving error log...\n') ;
+%     errTabName = helpName(['HAPPE_errorLog_' datestr(now, 'dd-mm-yyyy') ...
+%         '.csv']) ;
+%     writetable(cell2table(errorLog, 'VariableNames', {'File', ...
+%         'Error Message'}), errTabName, 'QuoteStrings', 1) ;
+% end

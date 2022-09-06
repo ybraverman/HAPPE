@@ -47,8 +47,8 @@ function means = assessPipelineStep(key, preEEG, postEEG, means, srate, ...
     freqsofinterest)
 fprintf(['Evaluating pipeline performance on ' key '...\n']) ;
 % Calculate Cross Correlation:
-cc = corrcoef(postEEG, preEEG) ;
-ccFreqs = mean(mscohere(postEEG', preEEG', 1000, 0, freqsofinterest, ...
+cc = corrcoef(postEEG, double( preEEG)) ;
+ccFreqs = mean(mscohere(postEEG',double( preEEG'), 1000, 0, freqsofinterest, ...
     srate), 2, 'omitnan')' ;
 
 % LINE NOISE REDUCTION: If assessing line noise reduction, simply

@@ -40,17 +40,20 @@ if EEG.trials == 1
     % TASK/ERP - SEGMENT USING TAGS
     if params.paradigm.task
         % For ERPs, adjust the event latencies by the user-specified
-        % offset.
-        if params.paradigm.ERP.on
-            if length(params.segment.offset)>1
-                sampOffset = EEG.srate*params.segment.offset(curr_file)/1000 ; %YB added curr_file
-            elseif length(params.segment.offset) == 1
-                sampOffset = EEG.srate*params.segment.offset/1000 ; %YB added curr_file
-            end
-            %yb commented out bc already offset during beapp formatting
-          %  for i = 1:size(EEG.event, 2); EEG_2.event(i).latency = ...
-                  %  EEG.event(i).latency + sampOffset ; end
-       end
+        % offset.%YB commented because offsets were already dealt with in
+        % beapp formatting
+%         if params.paradigm.ERP.on
+%             if length(params.segment.offset)>1
+%                 sampOffset = EEG.srate*params.segment.offset/1000 ; 
+%             elseif length(params.segment.offset) == 1
+%                 sampOffset = EEG.srate*params.segment.offset/1000 ; 
+%             end
+% 
+%             %yb commented out bc already offset during beapp formatting
+% %             for i = 1:size(EEG.event, 2); EEG.event(i).latency = ...
+% %                     EEG.event(i).latency + sampOffset ; end
+%         end
+%           
      %   
         % Try segmenting the data using user-specified tags, catching any
         % errors that occur in the process. If unable to find any of the
