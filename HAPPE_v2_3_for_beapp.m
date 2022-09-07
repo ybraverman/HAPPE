@@ -72,7 +72,7 @@
 % contributors are under no obligation to provide maintenance, support, 
 % updates, enhancements, or modifications.
 %~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-function [eeg_out,dataQC,chan_info,lnMeans,wavMeans,errorLog] = HAPPE_v2_3_yb(params,EEGraw, reprocess,FileNames,srcDir,dirNames)
+function [eeg_out,dataQC,chan_info,lnMeans,wavMeans,errorLog] = HAPPE_v2_3_for_beapp(params,EEGraw, reprocess,FileNames,srcDir,dirNames)
 %% CLEAR THE WORKSPACE
 %clear ;
 no_filt = 1;
