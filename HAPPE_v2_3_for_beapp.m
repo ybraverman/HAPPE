@@ -831,7 +831,7 @@ for currFile = 1:length(FileNames)
         % per condition. Additionally updates the data quality metrics 
         % specific to tags and conditions with the number and percent 
         % trials retained.
-        if params.paradigm.task && size(params.paradigm.onsetTags,2) > 1
+        if params.paradigm.task && size(params.paradigm.onsetTags,2) >= 1
             % Split by Event Tags:
             fprintf('Creating EEGs by event tags...\n') ;
             eegByTags = cell(1,size(params.paradigm.onsetTags,2)) ;
@@ -906,7 +906,7 @@ for currFile = 1:length(FileNames)
         if params.outputFormat == 1 || params.outputFormat == 3
             pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
                 inputExt, ['_processed' rerunExt '.set'])) ;
-            if params.paradigm.task && size(params.paradigm.onsetTags,2) > 1
+            if params.paradigm.task && size(params.paradigm.onsetTags,2) >= 1
                 for i=1:size(eegByTags, 2)
                     pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
                         inputExt, ['_processed_' params.paradigm.onsetTags{i} ...
@@ -926,7 +926,7 @@ for currFile = 1:length(FileNames)
             save(strrep(FileNames{currFile}, inputExt, ['_processed' ...
                 rerunExt '.mat']), 'EEG') ;
             if params.paradigm.task && size(params.paradigm.onsetTags, ... %YB changed params.paradigm.task.on to params.paradigm.task
-                    2) > 1
+                    2) >= 1
                 for i=1:size(eegByTags, 2)
                     currEEG = eegByTags(i) ;
                     save(strrep(FileNames{currFile}, inputExt, ...
@@ -949,7 +949,7 @@ for currFile = 1:length(FileNames)
             pop_export(EEG, strrep(FileNames{currFile}, inputExt, ...
                 ['_processed_AveOverTrials' rerunExt '.txt']), ...
                 'transpose', 'on', 'erp', 'on', 'precision', 8) ;
-            if size(params.paradigm.onsetTags, 2) > 1
+            if size(params.paradigm.onsetTags, 2) >= 1
                 for i=1:size(eegByTags, 2)
                     pop_export(eegByTags{i}, strrep(FileNames{currFile}, ... %YB changed eegByTags{i} from eegByTags(i)
                         inputExt, ['_processed_IndivTrial' ...
@@ -1071,7 +1071,7 @@ end
     % CREATE AND SAVE DATA QUALITY ASSESSMENT
     % Concat Names and QC matrices according to the presence or absence of
     % multiple onset tags and conditions.
-    if params.paradigm.task && size(params.paradigm.onsetTags,2) > 1
+    if params.paradigm.task && size(params.paradigm.onsetTags,2) >= 1
       %  dataQCnames = [dataQCnames dataQCnames_task] ; YB commented
         dataQC = [dataQC dataQC_task] ;
         if params.paradigm.conds.on
