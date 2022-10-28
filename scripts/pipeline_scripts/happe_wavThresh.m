@@ -112,8 +112,14 @@ end
 EEG.setname = 'wavcleanedEEG' ;
 
 % WAVELETING QC METRICS: Assesses the performance of wavelet thresholding.
+try
 wavMeans = assessPipelineStep('wavelet thresholding', preEEG, postEEG, ...
    wavMeans, EEG.srate, params.QCfreqs) ;
+catch
+    eeglab; close;
+    wavMeans = assessPipelineStep('wavelet thresholding', preEEG, postEEG, ...
+   wavMeans, EEG.srate, params.QCfreqs) ;
+end
 % DATA QC METRICS: Add the variance retained to the data QC matrix.
 dataQC{currFile, 6} = var(postEEG, 1, 'all')/var(preEEG, 1, 'all')*100 ;
 end
