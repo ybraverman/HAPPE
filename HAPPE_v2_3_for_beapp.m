@@ -951,6 +951,8 @@ for currFile = 1:length(FileNames)
                 'transpose', 'on', 'erp', 'on', 'precision', 8) ;
             if size(params.paradigm.onsetTags, 2) >= 1
                 for i=1:size(eegByTags, 2)
+                    %RL inserted try catch
+                    try
                     pop_export(eegByTags{i}, strrep(FileNames{currFile}, ... %YB changed eegByTags{i} from eegByTags(i)
                         inputExt, ['_processed_IndivTrial' ...
                         params.paradigm.onsetTags{i} rerunExt '.txt']), ...
@@ -959,6 +961,9 @@ for currFile = 1:length(FileNames)
                         inputExt, ['_processed_AveOverTrials' ...
                         params.paradigm.onsetTags{i} rerunExt '.txt']), ...
                         'transpose', 'on', 'erp', 'on', 'precision', 8) ;
+                    catch
+                        fprintf('Missing Tag\n')
+                    end
                 end
                 if params.paradigm.conds.on
                     for i=1:size(eegByConds,2)
