@@ -674,8 +674,13 @@ for currFile = 1:length(FileNames)
                 pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, inputExt, ...
                     ['_segmented' rerunExt '.set'])) ;       
             catch ME
-                fprintf(2, 'ERROR: Segmenting failed.\n') ;
-                rethrow(ME) ;
+                %RL added if else statement
+                if strcmp(ME.identifier, 'HAPPE:noTags')
+                    fprintf('No Tag identified')
+                else
+                    fprintf(2, 'ERROR: Segmenting failed.\n') ;
+                    rethrow(ME) ;
+                end
             end
         end
         
@@ -839,7 +844,7 @@ for currFile = 1:length(FileNames)
                 try eegByTags{i} = pop_selectevent(EEG, 'type', ...
                         params.paradigm.onsetTags{i}) ;                   
                     dataQC_task{currFile, i*3-1} = length(eegByTags{i}.epoch) ; %YB CHANGED eegByTags{i}.epoch from eegByTags(i).epoch
-                     if  dataQC_task{currFile, i*3-1} == 0 && eegByTags.trials == 1
+                    if  dataQC_task{currFile, i*3-1} == 0 && eegByTags{i}.trials == 1 %RL changed eegByTags.trials to eegByTags{i}.trials
                         dataQC_task{currFile, i*3-2} = 1; %yb added above lines to account for single trial edge case
                     %YB commented and changed to above length(pop_selectevent(EEG, ...
                      %  'type', params.paradigm.onsetTags{i}).epoch) ;
@@ -951,6 +956,7 @@ for currFile = 1:length(FileNames)
                 'transpose', 'on', 'erp', 'on', 'precision', 8) ;
             if size(params.paradigm.onsetTags, 2) >= 1
                 for i=1:size(eegByTags, 2)
+                    try %RL added try catch
                     pop_export(eegByTags{i}, strrep(FileNames{currFile}, ... %YB changed eegByTags{i} from eegByTags(i)
                         inputExt, ['_processed_IndivTrial' ...
                         params.paradigm.onsetTags{i} rerunExt '.txt']), ...
@@ -959,9 +965,13 @@ for currFile = 1:length(FileNames)
                         inputExt, ['_processed_AveOverTrials' ...
                         params.paradigm.onsetTags{i} rerunExt '.txt']), ...
                         'transpose', 'on', 'erp', 'on', 'precision', 8) ;
+                    catch
+                        fprintf('Missing Tag\n')
+                    end
                 end
                 if params.paradigm.conds.on
                     for i=1:size(eegByConds,2)
+                        try %RL added try catch
                         pop_export(eegByConds{i}, strrep(FileNames{currFile}, ...
                             inputExt, ['_processed_IndivTrial' ...
                             params.paradigm.conds.groups{i,1} rerunExt, ...
@@ -971,6 +981,9 @@ for currFile = 1:length(FileNames)
                             params.paradigm.conds.groups{i,1} rerunExt, ...
                             '.txt']), 'transpose', 'on', 'erp', 'on', ...
                             'precision', 8) ;
+                        catch
+                            fprintf('Missing Tag\n')
+                        end
                     end
                 end
             end
